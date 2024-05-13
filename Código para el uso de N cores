@@ -1,0 +1,371 @@
+import multiprocessing
+import numpy as np
+from tabulate import tabulate
+import matplotlib.pyplot as plt
+import time
+
+# Lista de temperaturas
+temperaturas_kelvin = np.array([325.15, 326.15, 328.15, 330.15, 332.15, 334.15, 336.15, 337.15, 339.15, 341.15,
+               343.15, 345.15, 347.15, 349.15, 351.15, 353.15, 355.15, 356.15, 358.15, 360.15,
+               362.15, 364.15, 366.15, 368.15, 370.15, 372.15, 374.15, 376.15, 378.15, 380.15,
+               381.15, 383.15, 385.15, 387.15, 389.15, 391.15, 393.15, 395.15, 397.15, 399.15,
+               401.15, 403.15, 405.15, 407.15, 409.15, 410.15, 412.15, 414.15, 416.15, 418.15,
+               419.15, 422.15, 423.15, 425.15, 428.15, 429.15, 431.15, 433.15, 435.15, 437.15,
+               439.15, 441.15, 442.15, 445.15, 446.15, 449.15, 450.15, 452.15, 454.15, 456.15,
+               458.15, 460.15, 462.15, 464.15, 466.15, 468.15, 470.15, 471.15, 474.15, 475.15,
+               477.15, 479.15, 481.15, 483.15, 485.15, 487.15, 489.15, 491.15, 493.15, 495.15,
+               497.15, 499.15, 501.15, 502.15, 504.15, 506.15, 508.15, 510.15, 512.15, 514.15,
+               515.15, 517.15, 519.15, 521.15, 523.15, 525.15, 527.15, 529.15, 531.15, 533.15,
+               535.15, 537.15, 539.15, 540.15, 543.15, 544.15, 546.15, 548.15, 550.15, 552.15,
+               554.15, 556.15, 558.15, 560.15, 562.15, 563.15, 565.15, 567.15, 569.15, 571.15,
+               573.15, 575.15, 577.15, 579.15, 581.15, 583.15, 585.15, 586.15, 588.15, 590.15,
+               592.15, 594.15, 596.15, 598.15, 600.15, 602.15, 604.15, 606.15, 607.15, 609.15,
+               611.15, 613.15, 615.15, 617.15, 619.15, 621.15, 623.15, 625.15, 627.15, 628.15,
+               630.15, 632.15, 634.15, 636.15, 638.15, 640.15, 642.15, 644.15, 646.15, 648.15,
+               649.15, 651.15, 653.15, 655.15, 657.15, 659.15, 661.15, 663.15, 665.15, 667.15,
+               669.15, 670.15, 672.15])
+
+
+
+# Lista de intensidades de TL
+intensidades = np.array([139, 154, 197, 238, 136, 135, 252, 231, 217, 377, 528, 362, 447, 619, 535, 548,
+              766, 831, 953, 963, 1159, 1533, 1814, 2134, 2443, 2547, 3076, 3683, 3721, 4496,
+              5111, 5917, 6490, 7112, 8133, 8805, 10515, 10697, 11648, 12960, 14205, 15081,
+              16561, 18610, 21543, 24363, 26022, 29042, 33668, 37654, 42083, 48063, 53994,
+              60113, 65625, 72405, 80825, 86091, 91431, 100505, 106245, 110940, 116491, 119494,
+              123741, 120026, 122565, 120028, 116314, 108888, 104407, 96170, 87742, 78936,
+              72285, 61418, 56431, 47622, 41652, 35764, 31051, 26433, 23081, 20467, 18270,
+              16286, 16352, 15799, 14964, 14726, 15321, 14860, 16130, 17154, 16369, 17303,
+              16763, 17994, 18353, 20763, 20587, 22631, 23584, 26372, 28109, 30326, 33577,
+              34900, 37626, 39548, 41638, 46430, 46160, 49938, 52112, 55097, 57206, 58326,
+              61385, 61309, 61734, 62963, 60254, 60869, 60305, 59433, 56164, 54024, 52733,
+              49544, 47672, 45909, 43697, 38772, 36228, 35328, 33176, 30326, 28288, 25902,
+              23987, 22327, 21709, 21649, 19825, 20329, 20670, 21537, 20876, 22702, 23296,
+              23713, 24404, 24422, 26156, 27100, 28763, 28410, 29014, 29421, 28072, 29067,
+              29631, 28283, 27975, 27474, 27505, 26375, 25620, 24620, 22114, 22623, 21004,
+              21185, 21637, 19361, 18227, 17851, 18691, 17465, 18265, 17979, 15967])
+
+#funcion de ajuste 
+def Intensity(E_a,b,Im,Tm,T):
+    
+    return  (Im*b**(b/(b-1)))*np.exp((E_a*(T-Tm))/(k*T*Tm))*(1+(b-1)*((2*k*Tm)/E_a)+(b-1)*(1-(2*k*T)/E_a)*((T**2/Tm**2)*np.exp((E_a*(T-Tm))/(k*T*Tm))))**(-b/(b-1))
+
+#Im es la intensidad maxima, Tm en la temperatura a la que se alcanza Im, ambos dato son experimentales 
+
+
+#Calculo del area
+def area_trapecios(x, y):
+    #x = sp.Symbol('x') 
+    area = 0
+    for i in range(len(x) - 1):
+        area += (y[i] + y[i + 1]) * (x[i + 1] - x[i]) / 2
+    return area
+
+seleccion1_t = temperaturas_kelvin[45:83]
+seleccion1_I = intensidades[45:83]
+
+
+
+#valores de areas
+areat = area_trapecios(temperaturas_kelvin, intensidades)
+area1 = area_trapecios(seleccion1_t, seleccion1_I)
+print(f"Área bajo la curva 1: {areat}")
+print(f"Área bajo la curva de la Porción selecionada: {area1}")
+
+region=[410.15,435.15,460.15,481.15]
+#Contantes y datos experimentales
+k = 8.617e-5
+Im=seleccion1_I[19]
+Tm=seleccion1_t[19]
+
+#numeros aleatorios la los valos de energia entre 0.5 y 1.5 eV
+def Erandon(x):
+    return 0.5+np.random.random_sample((x))
+
+
+E_e1=Erandon(10)
+
+i=1.4
+
+
+N=1000000
+
+R11=410.15+np.random.random_sample((N))*(25)
+R21=435.15+np.random.random_sample((N))*(25)
+R31=460.15+np.random.random_sample((N))*(21)
+
+def fune1(y):
+    p=Intensity(E_e1[0],i,Im,Tm,y)
+    return p
+def fune11(y):
+    p=Intensity(E_e1[0],i,Im,Tm,y)
+    return p*p
+def fune2(y):
+    p=Intensity(E_e1[1],i,Im,Tm,y)
+    return p
+def fune22(y):
+    p=Intensity(E_e1[1],i,Im,Tm,y)
+    return p*p
+def fune3(y):
+    p=Intensity(E_e1[2],i,Im,Tm,y)
+    return p
+def fune33(y):
+    p=Intensity(E_e1[2],i,Im,Tm,y)
+    return p*p
+def fune4(y):
+    p=Intensity(E_e1[3],i,Im,Tm,y)
+    return p
+def fune44(y):
+    p=Intensity(E_e1[3],i,Im,Tm,y)
+    return p*p
+def fune5(y):
+    p=Intensity(E_e1[4],i,Im,Tm,y)
+    return p
+def fune55(y):
+    p=Intensity(E_e1[4],i,Im,Tm,y)
+    return p*p
+def fune6(y):
+    p=Intensity(E_e1[5],i,Im,Tm,y)
+    return p
+def fune66(y):
+    p=Intensity(E_e1[5],i,Im,Tm,y)
+    return p*p
+def fune7(y):
+    p=Intensity(E_e1[6],i,Im,Tm,y)
+    return p
+def fune77(y):
+    p=Intensity(E_e1[6],i,Im,Tm,y)
+    return p*p
+def fune8(y):
+    p=Intensity(E_e1[7],i,Im,Tm,y)
+    return p
+def fune88(y):
+    p=Intensity(E_e1[7],i,Im,Tm,y)
+    return p*p
+def fune9(y):
+    p=Intensity(E_e1[8],i,Im,Tm,y)
+    return p
+def fune99(y):
+    p=Intensity(E_e1[8],i,Im,Tm,y)
+    return p*p
+def fune10(y):
+    p=Intensity(E_e1[9],i,Im,Tm,y)
+    return p
+def fune1010(y):
+    p=Intensity(E_e1[9],i,Im,Tm,y)
+    return p*p
+
+
+# Registra el tiempo de inicio
+inicio = time.time()
+
+#funcion auxiliar para la estimacion de los parametros cineticos
+
+num_procesos = 7
+pool = multiprocessing.Pool(num_procesos)
+print(f"---------------------------------Para b = {round(i, 2)}-------------------------------------")
+########################################################################
+res11=(np.sum(pool.map(fune1, R11))/N)*(region[1]-region[0])
+res21=(np.sum(pool.map(fune1, R21))/N)*(region[2]-region[1])
+res31=(np.sum(pool.map(fune1, R31))/N)*(region[3]-region[2])
+
+tot1=res11+res21+res31
+s11=((np.sum(pool.map(fune11, R11))/N)*(region[1]-region[0]))-(res11**2/N)
+s21=((np.sum(pool.map(fune11, R21))/N)*(region[2]-region[1]))-(res21**2/N)
+s31=((np.sum(pool.map(fune11, R31))/N)*(region[3]-region[2]))-(res31**2/N)
+
+stot1=np.sqrt(s11+s21+s31)
+print("Para el valor de energia E1 =",round(E_e1[0], 2), "el resultado de Est/area es", tot1/area1)
+print(tot1/area1,stot1/area1)
+#######################################################################
+
+########################################################################
+res12=(np.sum(pool.map(fune2, R11))/N)*(region[1]-region[0])
+res22=(np.sum(pool.map(fune2, R21))/N)*(region[2]-region[1])
+res32=(np.sum(pool.map(fune2, R31))/N)*(region[3]-region[2])
+
+tot2=res12+res22+res32
+s12=((np.sum(pool.map(fune22, R11))/N)*(region[1]-region[0]))-(res12**2/N)
+s22=((np.sum(pool.map(fune22, R21))/N)*(region[2]-region[1]))-(res22**2/N)
+s32=((np.sum(pool.map(fune22, R31))/N)*(region[3]-region[2]))-(res32**2/N)
+
+stot2=np.sqrt(s12+s22+s32)
+print("Para el valor de energia E2 =",round(E_e1[1], 2), "el resultado de Est/area es", tot2/area1)
+print(tot2/area1,stot2/area1)
+#######################################################################
+
+########################################################################
+res13=(np.sum(pool.map(fune3, R11))/N)*(region[1]-region[0])
+res23=(np.sum(pool.map(fune3, R21))/N)*(region[2]-region[1])
+res33=(np.sum(pool.map(fune3, R31))/N)*(region[3]-region[2])
+
+tot3=res13+res23+res33
+s13=((np.sum(pool.map(fune33, R11))/N)*(region[1]-region[0]))-(res13**2/N)
+s23=((np.sum(pool.map(fune33, R21))/N)*(region[2]-region[1]))-(res23**2/N)
+s33=((np.sum(pool.map(fune33, R31))/N)*(region[3]-region[2]))-(res33**2/N)
+
+stot3=np.sqrt(s13+s23+s33)
+print("Para el valor de energia E3 =",round(E_e1[2], 2), "el resultado de Est/area es", tot3/area1)
+print(tot3/area1,stot3/area1)
+#######################################################################
+
+########################################################################
+res14=(np.sum(pool.map(fune4, R11))/N)*(region[1]-region[0])
+res24=(np.sum(pool.map(fune4, R21))/N)*(region[2]-region[1])
+res34=(np.sum(pool.map(fune4, R31))/N)*(region[3]-region[2])
+
+tot4=res14+res24+res34
+s14=((np.sum(pool.map(fune44, R11))/N)*(region[1]-region[0]))-(res14**2/N)
+s24=((np.sum(pool.map(fune44, R21))/N)*(region[2]-region[1]))-(res24**2/N)
+s34=((np.sum(pool.map(fune44, R31))/N)*(region[3]-region[2]))-(res34**2/N)
+
+stot4=np.sqrt(s14+s24+s34)
+print("Para el valor de energia E4 =",round(E_e1[3], 2), "el resultado de Est/area es", tot4/area1)
+print(tot4/area1,stot4/area1)
+#######################################################################
+
+########################################################################
+res15=(np.sum(pool.map(fune5, R11))/N)*(region[1]-region[0])
+res25=(np.sum(pool.map(fune5, R21))/N)*(region[2]-region[1])
+res35=(np.sum(pool.map(fune5, R31))/N)*(region[3]-region[2])
+
+tot5=res15+res25+res35
+s15=((np.sum(pool.map(fune55, R11))/N)*(region[1]-region[0]))-(res15**2/N)
+s25=((np.sum(pool.map(fune55, R21))/N)*(region[2]-region[1]))-(res25**2/N)
+s35=((np.sum(pool.map(fune55, R31))/N)*(region[3]-region[2]))-(res35**2/N)
+
+stot5=np.sqrt(s15+s25+s35)
+print("Para el valor de energia E5 =",round(E_e1[4], 2), "el resultado de Est/area es", tot5/area1)
+print(tot5/area1,stot5/area1)
+#######################################################################
+
+########################################################################
+res16=(np.sum(pool.map(fune6, R11))/N)*(region[1]-region[0])
+res26=(np.sum(pool.map(fune6, R21))/N)*(region[2]-region[1])
+res36=(np.sum(pool.map(fune6, R31))/N)*(region[3]-region[2])
+
+tot6=res16+res26+res36
+s16=((np.sum(pool.map(fune66, R11))/N)*(region[1]-region[0]))-(res16**2/N)
+s26=((np.sum(pool.map(fune66, R21))/N)*(region[2]-region[1]))-(res26**2/N)
+s36=((np.sum(pool.map(fune66, R31))/N)*(region[3]-region[2]))-(res36**2/N)
+
+stot6=np.sqrt(s16+s26+s36)
+print("Para el valor de energia E6 =",round(E_e1[5], 2), "el resultado de Est/area es", tot6/area1)
+print(tot6/area1,stot6/area1)
+#######################################################################
+
+########################################################################
+res17=(np.sum(pool.map(fune7, R11))/N)*(region[1]-region[0])
+res27=(np.sum(pool.map(fune7, R21))/N)*(region[2]-region[1])
+res37=(np.sum(pool.map(fune7, R31))/N)*(region[3]-region[2])
+
+tot7=res17+res27+res37
+s17=((np.sum(pool.map(fune77, R11))/N)*(region[1]-region[0]))-(res17**2/N)
+s27=((np.sum(pool.map(fune77, R21))/N)*(region[2]-region[1]))-(res27**2/N)
+s37=((np.sum(pool.map(fune77, R31))/N)*(region[3]-region[2]))-(res37**2/N)
+
+stot7=np.sqrt(s17+s27+s37)
+print("Para el valor de energia E7=",round(E_e1[6], 2), "el resultado de Est/area es", tot7/area1)
+print(tot7/area1,stot7/area1)
+#######################################################################
+
+########################################################################
+res18=(np.sum(pool.map(fune8, R11))/N)*(region[1]-region[0])
+res28=(np.sum(pool.map(fune8, R21))/N)*(region[2]-region[1])
+res38=(np.sum(pool.map(fune8, R31))/N)*(region[3]-region[2])
+
+tot8=res18+res28+res38
+s18=((np.sum(pool.map(fune88, R11))/N)*(region[1]-region[0]))-(res18**2/N)
+s28=((np.sum(pool.map(fune88, R21))/N)*(region[2]-region[1]))-(res28**2/N)
+s38=((np.sum(pool.map(fune88, R31))/N)*(region[3]-region[2]))-(res38**2/N)
+
+stot8=np.sqrt(s18+s28+s38)
+print("Para el valor de energia E8=",round(E_e1[7], 2), "el resultado de Est/area es", tot8/area1)
+print(tot8/area1,stot8/area1)
+#######################################################################
+
+########################################################################
+res19=(np.sum(pool.map(fune9, R11))/N)*(region[1]-region[0])
+res29=(np.sum(pool.map(fune9, R21))/N)*(region[2]-region[1])
+res39=(np.sum(pool.map(fune9, R31))/N)*(region[3]-region[2])
+
+tot9=res19+res29+res39
+s19=((np.sum(pool.map(fune99, R11))/N)*(region[1]-region[0]))-(res19**2/N)
+s29=((np.sum(pool.map(fune99, R21))/N)*(region[2]-region[1]))-(res29**2/N)
+s39=((np.sum(pool.map(fune99, R31))/N)*(region[3]-region[2]))-(res39**2/N)
+
+stot9=np.sqrt(s19+s29+s39)
+print("Para el valor de energia E9=",round(E_e1[8], 2), "el resultado de Est/area es", tot9/area1)
+print(tot9/area1,stot9/area1)
+#######################################################################
+
+########################################################################
+res110=(np.sum(pool.map(fune10, R11))/N)*(region[1]-region[0])
+res210=(np.sum(pool.map(fune10, R21))/N)*(region[2]-region[1])
+res310=(np.sum(pool.map(fune10, R31))/N)*(region[3]-region[2])
+
+tot10=res110+res210+res310
+s110=((np.sum(pool.map(fune1010, R11))/N)*(region[1]-region[0]))-(res110**2/N)
+s210=((np.sum(pool.map(fune1010, R21))/N)*(region[2]-region[1]))-(res210**2/N)
+s310=((np.sum(pool.map(fune1010, R31))/N)*(region[3]-region[2]))-(res310**2/N)
+
+stot10=np.sqrt(s110+s210+s310)
+print("Para el valor de energia E10=",round(E_e1[9], 2), "el resultado de Est/area es", tot10/area1)
+print(tot10/area1,stot10/area1)
+#######################################################################
+
+
+
+# Registra el tiempo de finalización
+fin = time.time()
+
+# Calcula el tiempo total de ejecución en segundos
+tiempo_total = fin - inicio
+#print("Tiempo de ejecución:", tiempo_total, "segundos")   
+#print(res)
+#print(resultados)  
+# Crear una lista de listas para representar los datos
+data = [[f"Para {num_procesos} nucleos"],[f"Para {N} numeros aleatorios"],["Tiempo de ejecución:"], [f"{tiempo_total} segundos"]]
+
+# Imprimir la tabla
+print(tabulate(data, tablefmt="fancy_grid"))
+print('------------------------------------------------------------------------------------------')
+# Listas para almacenar los datos
+x1_datos = [1,2,3,4,5,6,7,8,9,10]
+y1_datos = [tot1/area1,tot2/area1,tot3/area1,tot4/area1,tot5/area1,tot6/area1,tot7/area1,tot8/area1,tot9/area1,tot10/area1]
+
+# Graficar los datos
+plt.scatter(x1_datos, y1_datos)
+
+plt.xlabel('#')
+plt.ylabel('Est/Area')
+plt.title('Distribucion')
+plt.xticks(np.arange(0, 11, 1),['0', r'E1', r'E2', r'E3', r'E4', r'E5',r'E6',r'E7',r'E8',r'E9',r'E10'])
+plt.ylim(0.5,1.5)
+plt.axhline(1, color='Red', linewidth=1)
+plt.grid(False)
+plt.show()
+
+print(f'Para un valor de b = {round(i, 2)}')
+headers = ["Energia", "valor", "varianza", "est/area", "orden cinetico"]
+
+# Añadir datos a la tabla
+data = [
+    ["E1", round(E_e1[0], 2), stot1/area1, tot1/area1],
+    ["E2", round(E_e1[1], 2), stot2/area1, tot2/area1],
+    ["E3", round(E_e1[2], 2), stot3/area1, tot3/area1],
+    ["E4", round(E_e1[3], 2), stot4/area1, tot4/area1],
+    ["E5", round(E_e1[4], 2), stot5/area1, tot5/area1],
+    ["E6", round(E_e1[5], 2), stot6/area1, tot6/area1],
+    ["E7", round(E_e1[6], 2), stot7/area1, tot7/area1],
+    ["E8", round(E_e1[7], 2), stot8/area1, tot8/area1],
+    ["E9", round(E_e1[8], 2), stot9/area1, tot9/area1],
+    ["E10", round(E_e1[9], 2), stot10/area1, tot10/area1],
+    ]
+#nos interesan los valores de energia cuya coeficiente stot/area1 estoten en el rango de 0.9 a 1.1
+data_filtrada = [row for row in data if 0.95 <= row[3] <= 1.05 ]
+# Crear la tabla
+table = tabulate(data_filtrada, headers, tablefmt="grid")
+
+# Imprimir la tabla  
+print(table)
